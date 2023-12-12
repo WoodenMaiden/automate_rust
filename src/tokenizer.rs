@@ -1,38 +1,38 @@
-
 /// Represents a token type
 /// Keyword takes a string as argument to represent its name
 /// Useful for pattern matching
 #[derive(Debug, PartialEq, Clone)]
-pub enum TokenType {
+pub enum TokenType<'a> {
     String,
     Int,
-    Keyword(String),
+    Keyword(&'a str),
     Linebreak,
 }
 
 /// Transforms a string into a vector of tokens
-/// 
+///
 /// # Arguments
 /// - entry: string to parse
-/// 
+///
 /// # Returns
 /// - vector of tokens {TokenType}
 pub fn tokenizer(entry: &str) -> Vec<TokenType> {
-
     let mut tokens = Vec::<TokenType>::new();
 
-    let nb_lines = entry.lines().count();
+    for l in entry.lines() {
+        if l.is_empty() || l.starts_with('\n') {
+            continue;
+        }
 
-    for (nb, l) in entry.lines().enumerate() {
         for w in l.split(' ') {
             if w.is_empty() {
                 continue;
             }
 
             match w {
-                "contact" => tokens.push(TokenType::Keyword("contact".to_string())),
-                "rate" => tokens.push(TokenType::Keyword("rate".to_string())),
-                "delay" => tokens.push(TokenType::Keyword("delay".to_string())),
+                "contact" => tokens.push(TokenType::Keyword("contact")),
+                "rate" => tokens.push(TokenType::Keyword("rate")),
+                "delay" => tokens.push(TokenType::Keyword("delay")),
                 _ => match w.parse::<i32>() {
                     Ok(_) => tokens.push(TokenType::Int),
                     Err(_) => tokens.push(TokenType::String),
@@ -40,37 +40,45 @@ pub fn tokenizer(entry: &str) -> Vec<TokenType> {
             }
         }
 
-        if nb < nb_lines - 1 {
-            tokens.push(TokenType::Linebreak);
-        }
+        tokens.push(TokenType::Linebreak);
     }
 
     tokens
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     const EXAMPLE1: &str = r#"contact A B 20 50
-rate 5 20 35"#;
+rate 5 20 35
+
+delay A 3
+"#;
 
     #[test]
     fn test_tokenizer() {
         let tokens = tokenizer(EXAMPLE1);
 
-        assert_eq!(tokens.len(), 10);
-        assert_eq!(tokens, vec![
-            TokenType::Keyword("contact".to_string()),
-            TokenType::String,
-            TokenType::String,
-            TokenType::Int,
-            TokenType::Int,
-            TokenType::Linebreak,
-            TokenType::Keyword("rate".to_string()),
-            TokenType::Int,
-            TokenType::Int,
-            TokenType::Int])
+        assert_eq!(
+            tokens,
+            vec![
+                TokenType::Keyword("contact"),
+                TokenType::String,
+                TokenType::String,
+                TokenType::Int,
+                TokenType::Int,
+                TokenType::Linebreak,
+                TokenType::Keyword("rate"),
+                TokenType::Int,
+                TokenType::Int,
+                TokenType::Int,
+                TokenType::Linebreak,
+                TokenType::Keyword("delay"),
+                TokenType::String,
+                TokenType::Int, 
+                TokenType::Linebreak,
+            ]
+        )
     }
 }

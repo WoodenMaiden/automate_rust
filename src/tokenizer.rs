@@ -5,9 +5,9 @@ use ansi_term::Colour;
 /// Useful for pattern matching
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenType<'a> {
-    /// A variable string, identified by <id> in the grammar
+    /// A variable string, identified by &lt;id&gt; or &lt;str&gt; in the grammar
     String,
-    /// An integer, identified by <num> in the grammar
+    /// An integer, identified by &lt;num&gt; in the grammar
     Int,
     /// A keyword, identified by its name in the grammar
     Keyword(&'a str),

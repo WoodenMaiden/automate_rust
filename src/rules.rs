@@ -12,7 +12,7 @@ const SUC: Colour = Colour::Green;
 /// Runs the grammar checker
 ///
 /// # Arguments
-/// - tokens: vector of tokens {TokenType}
+/// - tokens: vector of tokens [TokenType](crate::tokenizer::TokenType)
 ///
 /// # Returns
 /// - true if the tokens respect the gramar, false otherwise
@@ -26,10 +26,10 @@ fn s(tokens: &[TokenType], cursor: usize) -> Option<usize> {
 }
 
 /// Tests if the tokens at position cursor match the rule C
-/// C -> contact <id> <id> <num> <num> \n D |  contact <id> <id> <num> <num> \n R | None
+/// C -> contact &lt;id&gt; &lt;id&gt; &lt;id&gt; &lt;id&gt; \n D |  contact &lt;id&gt; &lt;id&gt; &lt;id&gt; &lt;id&gt; \n R | None
 ///
 /// # Arguments
-/// - tokens: vector of tokens {TokenType}
+/// - tokens: vector of tokens [TokenType](crate::tokenizer::TokenType)
 /// - cursor: current position in the vector
 ///
 /// # Returns
@@ -74,10 +74,10 @@ fn c(tokens: &[TokenType], cursor: usize) -> Option<usize> {
 }
 
 /// Tests if the tokens at position cursor match the rule R
-/// R -> rate <num> <num> <num> \n R | rate <num> <num> <num> \n D | rate <num> <num> <num> \n C
+/// R -> rate &lt;id&gt; &lt;id&gt; &lt;id&gt; \n R | rate &lt;id&gt; &lt;id&gt; &lt;id&gt; \n D | rate &lt;id&gt; &lt;id&gt; &lt;id&gt; \n C
 ///
 /// # Arguments
-/// - tokens: vector of tokens {TokenType}
+/// - tokens: vector of tokens [TokenType](crate::tokenizer::TokenType)
 /// - cursor: current position in the vector
 ///
 /// # Returns
@@ -114,10 +114,10 @@ fn r(tokens: &[TokenType], cursor: usize) -> Option<usize> {
 }
 
 /// Tests if the tokens at position cursor match the rule D
-/// D -> delay <num> <num> <num> \n R | delay <num> <num> <num> \n D | delay <num> <num> <num> \n C
+/// D -> delay &lt;id&gt; &lt;id&gt; &lt;id&gt; \n R | delay &lt;id&gt; &lt;id&gt; &lt;id&gt; \n D | delay &lt;id&gt; &lt;id&gt; &lt;id&gt; \n C
 ///
 /// # Arguments
-/// - tokens: vector of tokens {TokenType}
+/// - tokens: vector of tokens [TokenType](crate::tokenizer::TokenType)
 ///
 /// # Returns
 /// - Some(cursor) if the tokens match the rule D, None otherwise

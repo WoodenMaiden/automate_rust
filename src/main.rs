@@ -1,6 +1,6 @@
-mod rule_parser;
-mod rules;
-mod tokenizer;
+pub mod rule_parser;
+pub mod rules;
+pub mod tokenizer;
 
 use ansi_term::Colour;
 use rules::prod;

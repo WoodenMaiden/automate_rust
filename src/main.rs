@@ -5,23 +5,20 @@ use ansi_term::Colour;
 use rules::prod;
 use tokenizer::{tokenizer, TokenType};
 
-static ENTRY: &str = r#"
-
-contact A B 20 50
-rate 5 20 35
-rate 10 35 50
-delay 1 20 50 
-
-
-contact B C 100 140
-rate 10 100 140
-delay 1 100 130
-delay 2 130 140
-
-"#;
+use std::{env, process::exit};
+use std::fs::read_to_string;
 
 fn main() {
-    let tokens = tokenizer(ENTRY);
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() != 2 {
+        println!("Usage: {} <file>", args[0]);
+        exit(1);
+    }
+
+    let entry = read_to_string(args[1].clone()).expect("File not found");
+
+    let tokens = tokenizer(&entry);
 
     let valid = prod(tokens);
 

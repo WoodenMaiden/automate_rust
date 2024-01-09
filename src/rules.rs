@@ -1,4 +1,8 @@
 use crate::TokenType;
+use ansi_term::Colour;
+
+const ERR: Colour = Colour::Red;
+const SUC: Colour = Colour::Green;
 
 // S -> C
 // C -> contact <id> <id> <num> <num> \n D |  contact <id> <id> <num> <num> \n R | None
@@ -13,103 +17,137 @@ use crate::TokenType;
 /// # Returns
 /// - true if the tokens respect the gramar, false otherwise
 pub fn prod(tokens: Vec<TokenType>) -> bool {
-    s(&tokens)
+    s(&tokens, 0).is_some()
 }
 
-/// Represents the S rule
 /// S -> C
-///
-/// # Arguments
-/// - remainng_tokens: vector of tokens {TokenType}
-///
-/// # Returns
-/// - true if the tokens respect the rule, false otherwise
-fn s(remaining_tokens: &[TokenType]) -> bool {
-    c(remaining_tokens)
+fn s(tokens: &[TokenType], cursor: usize) -> Option<usize> {
+    c(tokens, cursor)
 }
 
-/// Represents the C rule
+/// Tests if the tokens at position cursor match the rule C
 /// C -> contact <id> <id> <num> <num> \n D |  contact <id> <id> <num> <num> \n R | None
 ///
 /// # Arguments
-/// - remaining_tokens: vector of tokens {TokenType}
+/// - tokens: vector of tokens {TokenType}
+/// - cursor: current position in the vector
 ///
 /// # Returns
-/// - true if the tokens respect the rule, false otherwise
-fn c(remaining_tokens: &[TokenType]) -> bool {
-    println!("Called C w/ remaining_tokens: {:?}", remaining_tokens);
-    // since it can be NONE it will respect the rule
-    if remaining_tokens.is_empty() {
-        return true;
+/// - Some(cursor) if the tokens match the rule C, None otherwise, None is equivalent of a -1 in C or other languages
+fn c(tokens: &[TokenType], cursor: usize) -> Option<usize> {
+    let mut cursor = cursor;
+
+    println!(
+        "cursor position: {}",
+        Colour::Blue.bold().paint(cursor.to_string())
+    );
+
+    // The epsillon case
+    if cursor == tokens.len() {
+        println!("C: {}", SUC.bold().paint("Epsillon case !"));
+
+        return Some(cursor);
     };
 
-    // if we have either too few tokens to respect the rule AND if we have more than 0 tokens we won't respect the rule
-    if remaining_tokens.len() < 6 {
-        return false;
-    };
+    let to_match = tokens.get(cursor..cursor + 6)?;
 
-    let tokens_concerned = &remaining_tokens[..6];
+    print!("C: {:?}", to_match);
 
-    println!("tokens_concerned: {:?}", tokens_concerned);
+    match to_match {
+        [TokenType::Keyword("contact"), TokenType::String, TokenType::String, TokenType::Int, TokenType::Int, TokenType::Linebreak] =>
+        {
+            cursor += 6;
 
-    match tokens_concerned {
-        [TokenType::Keyword("contact"), TokenType::String, TokenType::String, TokenType::Int, TokenType::Int, TokenType::Linebreak] => {
-            d(&remaining_tokens[6..]) || r(&remaining_tokens[6..])
+            println!(" -> {}", SUC.bold().paint("Matched !"));
+
+            // returning anchor
+            match d(tokens, cursor) {
+                Some(c) => Some(c), // D matches so we return the cursor of D
+                None => r(tokens, cursor),
+            }
         }
-        _ => false,
+        _ => {
+            println!(" -> {}", ERR.bold().paint("Not Matched !"));
+            None
+        }
     }
 }
 
-/// Represents the R rule
+/// Tests if the tokens at position cursor match the rule R
 /// R -> rate <num> <num> <num> \n R | rate <num> <num> <num> \n D | rate <num> <num> <num> \n C
 ///
 /// # Arguments
-/// - remaining_tokens: vector of tokens {TokenType}
+/// - tokens: vector of tokens {TokenType}
+/// - cursor: current position in the vector
 ///
 /// # Returns
-/// - true if the tokens respect the rule, false otherwise
-fn r(remaining_tokens: &[TokenType]) -> bool {
-    println!("Called R w/ remaining_tokens: {:?}", remaining_tokens);
+/// - Some(cursor) if the tokens match the rule R, None otherwise
+fn r(tokens: &[TokenType], cursor: usize) -> Option<usize> {
+    let mut cursor = cursor;
 
-    if remaining_tokens.len() < 5 {
-        return false;
-    };
+    let to_match = tokens.get(cursor..cursor + 5)?;
 
-    let tokens_concerned = &remaining_tokens[..5];
+    print!("R: {:?}", to_match);
 
-    println!("tokens_concerned: {:?}", tokens_concerned);
+    match to_match {
+        [TokenType::Keyword("rate"), TokenType::Int, TokenType::Int, TokenType::Int, TokenType::Linebreak] =>
+        {
+            cursor += 5;
 
-    match tokens_concerned {
-        [TokenType::Keyword("rate"), TokenType::Int, TokenType::Int, TokenType::Int, TokenType::Linebreak] => {
-            r(&remaining_tokens[5..]) || d(&remaining_tokens[5..]) || c(&remaining_tokens[5..])
+            println!(" -> {}", SUC.bold().paint("Matched !"));
+
+            // returning anchor
+            match r(tokens, cursor) {
+                Some(c) => Some(c), // if R matches we return the cursor of R
+                None => match d(tokens, cursor) {
+                    // else we try for d
+                    Some(anchor_d) => Some(anchor_d),
+                    None => c(tokens, cursor), // else we try with C
+                },
+            }
         }
-        _ => false,
+        _ => {
+            println!(" -> {}", ERR.bold().paint("Not Matched !"));
+            None
+        }
     }
 }
 
-/// Represents the D rule
+/// Tests if the tokens at position cursor match the rule D
 /// D -> delay <num> <num> <num> \n R | delay <num> <num> <num> \n D | delay <num> <num> <num> \n C
 ///
 /// # Arguments
-/// - remaining_tokens: vector of tokens {TokenType}
+/// - tokens: vector of tokens {TokenType}
 ///
 /// # Returns
-/// - true if the tokens respect the rule, false otherwise
-fn d(remaining_tokens: &[TokenType]) -> bool {
-    println!("Called D w/ remaining_tokens: {:?}", remaining_tokens);
+/// - Some(cursor) if the tokens match the rule D, None otherwise
+fn d(tokens: &[TokenType], cursor: usize) -> Option<usize> {
+    let mut cursor = cursor;
 
-    if remaining_tokens.len() < 5 {
-        return false;
-    };
+    let to_match = tokens.get(cursor..cursor + 5)?;
 
-    let tokens_concerned = &remaining_tokens[..5];
+    print!("D: {:?}", to_match);
 
-    println!("tokens_concerned: {:?}", tokens_concerned);
+    match to_match {
+        [TokenType::Keyword("delay"), TokenType::Int, TokenType::Int, TokenType::Int, TokenType::Linebreak] =>
+        {
+            cursor += 5;
 
-    match tokens_concerned {
-        [TokenType::Keyword("delay"), TokenType::Int, TokenType::Int, TokenType::Int, TokenType::Linebreak] => {
-            r(&remaining_tokens[5..]) || d(&remaining_tokens[5..]) || c(&remaining_tokens[5..])
+            println!(" -> {}", SUC.bold().paint("Matched !"));
+
+            // returning anchor
+            match r(tokens, cursor) {
+                Some(c) => Some(c), // if R matches we return the cursor of R
+                None => match d(tokens, cursor) {
+                    // else we try for d
+                    Some(anchor_d) => Some(anchor_d),
+                    None => c(tokens, cursor), // else we try with C
+                },
+            }
         }
-        _ => false,
+        _ => {
+            println!(" -> {}", ERR.bold().paint("Not Matched !"));
+            None
+        }
     }
 }

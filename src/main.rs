@@ -1,6 +1,7 @@
 mod rules;
 mod tokenizer;
 
+use ansi_term::Colour;
 use rules::prod;
 use tokenizer::{tokenizer, TokenType};
 
@@ -22,9 +23,14 @@ delay 2 130 140
 fn main() {
     let tokens = tokenizer(ENTRY);
 
+    let valid = prod(tokens);
 
     println!(
-        "\nDoes the variable ENTRY respects the grammar? {}",
-        prod(tokens)
+        "\n---------------\nDoes the variable ENTRY respects the grammar? {}",
+        if valid {
+            Colour::Green.underline().paint("Yes")
+        } else {
+            Colour::Red.underline().paint("No")
+        }
     );
 }

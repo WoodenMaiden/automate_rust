@@ -1,3 +1,5 @@
+use ansi_term::Colour;
+
 /// Represents a token type
 /// Keyword takes a string as argument to represent its name
 /// Useful for pattern matching
@@ -43,6 +45,10 @@ pub fn tokenizer(entry: &str) -> Vec<TokenType> {
         tokens.push(TokenType::Linebreak);
     }
 
+    println!(
+        "Got {} tokens",
+        Colour::Blue.bold().paint(tokens.len().to_string())
+    );
     tokens
 }
 
@@ -76,7 +82,7 @@ delay A 3
                 TokenType::Linebreak,
                 TokenType::Keyword("delay"),
                 TokenType::String,
-                TokenType::Int, 
+                TokenType::Int,
                 TokenType::Linebreak,
             ]
         )

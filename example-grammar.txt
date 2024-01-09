@@ -1,0 +1,5 @@
+S -> C S | C
+C -> contact <id> <id> <num> <num> \n E
+E -> R E | D E | None
+R -> rate <num> <num> <num> \n
+D -> delay <num> <num> <num> \n

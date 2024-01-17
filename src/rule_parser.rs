@@ -13,9 +13,9 @@ pub enum RuleToken<'a> {
     /// See more on [TokenType](crate::tokenizer::TokenType)
     Token(TokenType<'a>),
     /// This is a terminal character, typically represented by a capital letter
-    Rule(Terminal), 
-    // Epsillon
-    None
+    Rule(Terminal),
+    // Epsilon
+    None,
 }
 
 /// This is the grammar structure
@@ -37,14 +37,14 @@ impl Grammar<'_> {
     }
 }
 
-
 pub fn parse_grammar(input: String) -> Grammar<'static> {
     let mut grammar = Grammar::new();
 
     let terms: Vec<String> = input
         .lines()
         .filter(|l| !l.trim().is_empty())
-        .map(|l| { // we get whats on the left of the arrow
+        .map(|l| {
+            // we get whats on the left of the arrow
             l.trim()
                 .split(" -> ")
                 .next()
@@ -85,6 +85,10 @@ pub fn parse_grammar(input: String) -> Grammar<'static> {
             })
             .collect();
 
+        if grammar.init_state.is_empty() {
+            grammar.init_state = term.to_string();
+        }
+
         grammar.rules.insert(String::from(term), possibilities);
     }
 
@@ -99,7 +103,7 @@ mod test {
     #[test]
     fn works() {
         let rule = String::from(
-        r#"S -> C S | C
+            r#"S -> C S | C
         C -> contact <id> <id> <num> <num> \n E
         E -> R E | D E | None
         R -> rate <num> <num> <num> \n
@@ -107,6 +111,8 @@ mod test {
         );
 
         let grammar = parse_grammar(rule);
+
+        assert_eq!(grammar.init_state, "S");
 
         assert_eq!(grammar.rules.len(), 5);
 
@@ -154,10 +160,7 @@ mod test {
             ]
         );
 
-        assert_eq!(
-            grammar.rules.get("E").unwrap()[2],
-            vec![RuleToken::None]
-        );
+        assert_eq!(grammar.rules.get("E").unwrap()[2], vec![RuleToken::None]);
 
         assert_eq!(grammar.rules.get("R").unwrap().len(), 1);
         assert_eq!(

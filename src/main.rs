@@ -2,10 +2,9 @@ pub mod rule_parser;
 pub mod rules;
 pub mod tokenizer;
 
-use ansi_term::Colour;
-use rules::prod;
-use tokenizer::{tokenizer, TokenType};
 use rule_parser::parse_grammar;
+use rules::{apply_grammar, ERR, INF, SUC};
+use tokenizer::{tokenizer, TokenType};
 
 use std::fs::read_to_string;
 use std::{env, process::exit};
@@ -24,14 +23,26 @@ fn main() {
     let grammar = parse_grammar(grammar);
     let tokens = tokenizer(&entry);
 
-    let valid = prod(tokens);
+    println!(
+        "{}",
+        INF.italic()
+            .paint(format!("Grammar is: 👇\n{:?}\n", grammar))
+    );
+
+    println!(
+        "{}",
+        INF.italic()
+            .paint(format!("File to test is: 👇\n{:?}\n", tokens))
+    );
+
+    let valid = apply_grammar(&tokens[..], grammar);
 
     println!(
         "\n---------------\nDoes the file complies with the grammar? {}\n---------------",
         if valid {
-            Colour::Green.underline().paint("Yes!!")
+            SUC.bold().paint("Yes!!")
         } else {
-            Colour::Red.underline().paint("Nope :(")
+            ERR.bold().paint("Nope!")
         }
     );
 }

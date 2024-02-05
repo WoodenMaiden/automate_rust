@@ -8,16 +8,15 @@ pub const ERR: Colour = Colour::Red;
 pub const SUC: Colour = Colour::Green;
 pub const INF: Colour = Colour::Blue;
 
-
 /// It runs [apply_rule](crate::rules::apply_rule) on all the rules of the initial state, it acts as an entrypoint
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `tokens` - The tokens to match
 /// * `grammar` - The grammar to match against
-/// 
+///
 /// # Returns
-/// 
+///
 /// * `bool` - Whether the tokens match the grammar or not
 pub fn apply_grammar(tokens: &[TokenType], grammar: Grammar) -> bool {
     let results: Vec<Option<usize>> = grammar
@@ -37,20 +36,19 @@ pub fn apply_grammar(tokens: &[TokenType], grammar: Grammar) -> bool {
     results.iter().any(|r| r.is_some())
 }
 
-
 /// This function tries to match a rule against a vector of tokens
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `tokens` - The tokens to match
 /// * `rule` - The rule to match against
 /// * `grammar` - The underlying grammar
 /// * `cursor` - The current cursor position
-/// 
+///
 /// # Returns
-/// 
+///
 /// * `Option<usize>` - The cursor position if the rule matches, None otherwise
-/// 
+///
 fn apply_rule(
     tokens: &[TokenType],
     rule: Vec<RuleToken>,
@@ -63,8 +61,11 @@ fn apply_rule(
 
     println!(
         "{}\n",
-        INF.bold()
-            .paint(format!("Trying rule\n{:?}\non\n{:?}", rule, to_match))
+        INF.bold().paint(format!(
+            "Trying rule\n{:?}\non\n{:?}",
+            rule,
+            to_match.get(..rule.len())?
+        ))
     );
 
     for (token_index, token) in rule.iter().enumerate() {
@@ -192,9 +193,52 @@ mod test {
 
         let mut rules: HashMap<String, Vec<Vec<RuleToken>>> = HashMap::new();
 
-        rules.insert("S".to_string(), vec![vec![RuleToken::Rule("A".to_string()), RuleToken::Rule("B".to_string())]]);
-        rules.insert("A".to_string(), vec![vec![RuleToken::Token(TokenType::Int)]]);
-        rules.insert("B".to_string(), vec![vec![RuleToken::Token(TokenType::String), RuleToken::None]]);
+        rules.insert(
+            "S".to_string(),
+            vec![vec![
+                RuleToken::Rule("A".to_string()),
+                RuleToken::Rule("B".to_string()),
+            ]],
+        );
+        rules.insert(
+            "A".to_string(),
+            vec![vec![RuleToken::Token(TokenType::Int)]],
+        );
+        rules.insert(
+            "B".to_string(),
+            vec![vec![RuleToken::Token(TokenType::String), RuleToken::None]],
+        );
+
+        grammar.rules = rules;
+
+        let tokens = vec![TokenType::Int, TokenType::String];
+
+        assert!(apply_grammar(&tokens, grammar));
+    }
+
+    #[test]
+    fn terminal_with_possibilities_having_several_terminals() {
+        let mut grammar = Grammar::new();
+        grammar.init_state = "S".to_string();
+
+        let mut rules: HashMap<String, Vec<Vec<RuleToken>>> = HashMap::new();
+
+        rules.insert(
+            "S".to_string(),
+            vec![vec![
+                RuleToken::Rule("A".to_string()),
+                RuleToken::Rule("B".to_string()),
+            ]],
+        );
+
+        rules.insert(
+            "A".to_string(),
+            vec![vec![RuleToken::Token(TokenType::Int)]],
+        );
+        rules.insert(
+            "B".to_string(),
+            vec![vec![RuleToken::Token(TokenType::String), RuleToken::None]],
+        );
 
         grammar.rules = rules;
 

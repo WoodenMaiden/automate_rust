@@ -2,7 +2,7 @@ pub mod rule_parser;
 pub mod rules;
 pub mod tokenizer;
 
-use rule_parser::parse_grammar;
+use rule_parser::{parse_grammar, RuleJSONEntry};
 use rules::{apply_grammar, ERR, INF, SUC};
 use tokenizer::{tokenizer, TokenType};
 
@@ -17,7 +17,10 @@ fn main() {
         exit(1);
     }
 
-    let grammar = read_to_string(args[1].clone()).expect("Grammar file not found");
+    let binding = read_to_string(args[1].clone()).expect("Grammar file not found");
+    let grammar: Vec<RuleJSONEntry> =
+        serde_json::from_str(&binding)
+            .expect("Not a valid JSON array");
     let entry = read_to_string(args[2].clone()).expect("File not found");
 
     let grammar = parse_grammar(grammar);

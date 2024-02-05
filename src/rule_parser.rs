@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use ansi_term::Colour;
 
 use crate::tokenizer::TokenType;
-
-pub type Terminal = String;
+use serde::{Deserialize, Serialize};
 
 /// These are the components of a rule
 #[derive(Debug, PartialEq, Clone)]
@@ -13,7 +12,7 @@ pub enum RuleToken<'a> {
     /// See more on [TokenType](crate::tokenizer::TokenType)
     Token(TokenType<'a>),
     /// This is a terminal character, typically represented by a capital letter
-    Rule(Terminal),
+    Rule(String),
     // Epsilon
     None,
 }
@@ -23,9 +22,15 @@ pub enum RuleToken<'a> {
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct Grammar<'a> {
     /// This is where the grammar starts at, by default its the first rule ever inserted, meaning on top of the file
-    pub init_state: Terminal,
+    pub init_state: String,
     /// The rules of the grammar, the key is the terminal character, the value is a vector of all the possible rules
-    pub rules: HashMap<Terminal, Vec<Vec<RuleToken<'a>>>>,
+    pub rules: HashMap<String, Vec<Vec<RuleToken<'a>>>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+pub struct RuleJSONEntry<'a> {
+    non_terminal: &'a str,
+    content: &'a str,
 }
 
 impl Grammar<'_> {
@@ -37,47 +42,26 @@ impl Grammar<'_> {
     }
 }
 
-pub fn parse_grammar(input: String) -> Grammar<'static> {
-    let mut grammar = Grammar::new();
+pub fn parse_grammar(input: Vec<RuleJSONEntry<'_>>) -> Grammar<'_> {
+    let non_terms: Vec<&str> = input.clone().into_iter().map(|e| e.non_terminal).collect();
 
-    let terms: Vec<String> = input
-        .lines()
-        .filter(|l| !l.trim().is_empty())
-        .map(|l| {
-            // we get whats on the left of the arrow
-            l.trim()
-                .split(" -> ")
-                .next()
-                .unwrap_or_else(|| {
-                    panic!(
-                        "{}",
-                        Colour::Red
-                            .bold()
-                            .paint("format: <Terminal character> -> <rule>")
-                    )
-                })
-                .to_string()
-        })
-        .collect();
-
-    for line in input.lines().filter(|l| !l.trim().is_empty()) {
-        let term = line.trim().split(" -> ").next().unwrap();
-        let rule = line.trim().split(" -> ").nth(1).unwrap();
-        let possibilities: Vec<Vec<RuleToken>> = rule
+    let rules = input.iter().map(|entry| {
+        let content = &entry.content;
+        let possibilities: Vec<Vec<RuleToken>> = content
             .split(" | ")
-            .map(|p| {
-                p.split(' ')
+            .map(|c| {
+                c.split(' ')
                     .filter(|token| !token.is_empty())
                     .map(|token| {
-                        if terms.contains(&String::from(token)) {
+                        if non_terms.contains(&token) {
                             RuleToken::Rule(String::from(token))
                         } else {
                             match token {
                                 "None" => RuleToken::None,
                                 "<str>" | "<id>" => RuleToken::Token(TokenType::String),
                                 "<num>" => RuleToken::Token(TokenType::Int),
-                                "\\n" => RuleToken::Token(TokenType::Linebreak),
-                                _ => RuleToken::Rule(String::from(token)),
+                                "<br>" => RuleToken::Token(TokenType::Linebreak),
+                                _ => RuleToken::Token(TokenType::Keyword(token)),
                             }
                         }
                     })
@@ -85,14 +69,21 @@ pub fn parse_grammar(input: String) -> Grammar<'static> {
             })
             .collect();
 
-        if grammar.init_state.is_empty() {
-            grammar.init_state = term.to_string();
-        }
+        (String::from(entry.non_terminal), possibilities)
+    });
 
-        grammar.rules.insert(String::from(term), possibilities);
+    Grammar {
+        init_state: input
+            .first()
+            .unwrap_or_else(|| {
+                panic!(
+                    "{}",
+                    Colour::Red.bold().paint("There shall be at least ont rule")
+                )
+            })
+            .non_terminal.to_string(),
+        rules: HashMap::from_iter(rules),
     }
-
-    grammar
 }
 
 // test
@@ -102,13 +93,32 @@ mod test {
 
     #[test]
     fn works() {
-        let rule = String::from(
-            r#"S -> C S | C
-        C -> contact <id> <id> <num> <num> \n E
-        E -> R E | D E | None
-        R -> rate <num> <num> <num> \n
-        D -> delay <num> <num> <num> \n"#,
-        );
+        let rule: Vec<RuleJSONEntry> = serde_json::from_str(
+            r#"[
+                {
+                  "non_terminal": "S",
+                  "content": "C S | C"
+                },
+                {
+                  "non_terminal": "C",
+                  "content": "contact <id> <id> <num> <num> <br> E"
+                },
+                {
+                  "non_terminal": "E",
+                  "content": "R E | D E | None"
+                },
+                {
+                  "non_terminal": "R",
+                  "content": "rate <num> <num> <num> <br>"
+                },
+                {
+                  "non_terminal": "D",
+                  "content": "delay <num> <num> <num> <br>"
+                }
+              ]
+              "#,
+        )
+        .unwrap();
 
         let grammar = parse_grammar(rule);
 
@@ -133,7 +143,7 @@ mod test {
         assert_eq!(
             grammar.rules.get("C").unwrap()[0],
             vec![
-                RuleToken::Rule(String::from("contact")),
+                RuleToken::Token(TokenType::Keyword("contact")),
                 RuleToken::Token(TokenType::String),
                 RuleToken::Token(TokenType::String),
                 RuleToken::Token(TokenType::Int),
@@ -166,7 +176,7 @@ mod test {
         assert_eq!(
             grammar.rules.get("R").unwrap()[0],
             vec![
-                RuleToken::Rule(String::from("rate")),
+                RuleToken::Token(TokenType::Keyword("rate")),
                 RuleToken::Token(TokenType::Int),
                 RuleToken::Token(TokenType::Int),
                 RuleToken::Token(TokenType::Int),
@@ -178,7 +188,7 @@ mod test {
         assert_eq!(
             grammar.rules.get("D").unwrap()[0],
             vec![
-                RuleToken::Rule(String::from("delay")),
+                RuleToken::Token(TokenType::Keyword("delay")),
                 RuleToken::Token(TokenType::Int),
                 RuleToken::Token(TokenType::Int),
                 RuleToken::Token(TokenType::Int),

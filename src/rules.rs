@@ -138,7 +138,7 @@ mod test {
     }
 
     #[test]
-    fn terminal_having_several_possibilities() {
+    fn non_terminal_having_several_possibilities() {
         let mut grammar = Grammar::new();
         grammar.init_state = "S".to_string();
         grammar.rules = HashMap::from_iter(iter::once((
@@ -177,7 +177,7 @@ mod test {
     }
 
     #[test]
-    fn terminal_leading_to_several_terminals() {
+    fn non_terminal_leading_to_several_non_terminals() {
         let mut grammar = Grammar::new();
         grammar.init_state = "S".to_string();
 
@@ -207,7 +207,7 @@ mod test {
     }
 
     #[test]
-    fn terminal_with_possibilities_having_several_terminals() {
+    fn non_terminal_with_possibilities_having_several_non_terminals() {
         let mut grammar = Grammar::new();
         grammar.init_state = "S".to_string();
 

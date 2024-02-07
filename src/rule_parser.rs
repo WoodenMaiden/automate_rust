@@ -11,7 +11,7 @@ pub enum RuleToken<'a> {
     /// This is a string, typically represented between &lt; and &gt; characters
     /// See more on [TokenType](crate::tokenizer::TokenType)
     Token(TokenType<'a>),
-    /// This is a terminal character, typically represented by a capital letter
+    /// This is a non-terminal character, typically represented by a capital letter
     Rule(String),
     // Epsilon
     None,
@@ -23,7 +23,7 @@ pub enum RuleToken<'a> {
 pub struct Grammar<'a> {
     /// This is where the grammar starts at, by default its the first rule ever inserted, meaning on top of the file
     pub init_state: String,
-    /// The rules of the grammar, the key is the terminal character, the value is a vector of all the possible rules
+    /// The rules of the grammar, the key is the non-terminal character, the value is a vector of all the possible rules
     pub rules: HashMap<String, Vec<Vec<RuleToken<'a>>>>,
 }
 

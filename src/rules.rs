@@ -59,15 +59,6 @@ fn apply_rule(
 
     let to_match = tokens.get(cursor..)?;
 
-    println!(
-        "{}\n",
-        INF.bold().paint(format!(
-            "Trying rule\n{:?}\non\n{:?}",
-            rule,
-            to_match.get(..rule.len())?
-        ))
-    );
-
     for (token_index, token) in rule.iter().enumerate() {
         println!("I am trying token: {:?}", token);
 
@@ -138,7 +129,7 @@ mod test {
         grammar.init_state = "S".to_string();
         grammar.rules = HashMap::from_iter(iter::once((
             "S".to_string(),
-            vec![vec![RuleToken::Token(TokenType::String), RuleToken::None]],
+            vec![vec![RuleToken::Token(TokenType::String)]],
         )));
 
         let tokens = vec![TokenType::String];
@@ -153,8 +144,8 @@ mod test {
         grammar.rules = HashMap::from_iter(iter::once((
             "S".to_string(),
             vec![
-                vec![RuleToken::Token(TokenType::String), RuleToken::None],
-                vec![RuleToken::Token(TokenType::Int), RuleToken::None],
+                vec![RuleToken::Token(TokenType::String)],
+                vec![RuleToken::Token(TokenType::Int)],
             ],
         )));
 
@@ -172,7 +163,6 @@ mod test {
             vec![vec![
                 RuleToken::Token(TokenType::String),
                 RuleToken::Rule("A".to_string()),
-                RuleToken::None,
             ]],
         )));
 

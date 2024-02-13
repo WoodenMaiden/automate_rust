@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ERR","INF","SUC"],"fn":["apply_grammar","apply_rule"]};

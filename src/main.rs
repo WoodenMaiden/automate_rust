@@ -1,33 +1,51 @@
-mod rules;
-mod tokenizer;
+pub mod rule_parser;
+pub mod rules;
+pub mod tokenizer;
 
-use ansi_term::Colour;
-use rules::prod;
+use rule_parser::{parse_grammar, RuleJSONEntry};
+use rules::{apply_grammar, ERR, INF, SUC};
 use tokenizer::{tokenizer, TokenType};
 
-use std::{env, process::exit};
 use std::fs::read_to_string;
+use std::{env, process::exit};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() != 2 {
-        println!("Usage: {} <file>", args[0]);
+    if args[1..].len() != 2 {
+        println!("Usage: {} <grammar file> <file to test>", args[0]);
         exit(1);
     }
 
-    let entry = read_to_string(args[1].clone()).expect("File not found");
+    let binding = read_to_string(args[1].clone()).expect("Grammar file not found");
+    let grammar: Vec<RuleJSONEntry> =
+        serde_json::from_str(&binding)
+            .expect("Not a valid JSON array");
+    let entry = read_to_string(args[2].clone()).expect("File not found");
 
+    let grammar = parse_grammar(grammar);
     let tokens = tokenizer(&entry);
 
-    let valid = prod(tokens);
+    println!(
+        "{}",
+        INF.italic()
+            .paint(format!("Grammar is: 👇\n{:?}\n", grammar))
+    );
 
     println!(
-        "\n---------------\nDoes the variable ENTRY respects the grammar? {}",
+        "{}",
+        INF.italic()
+            .paint(format!("File to test is: 👇\n{:?}\n", tokens))
+    );
+
+    let valid = apply_grammar(&tokens[..], grammar);
+
+    println!(
+        "\n---------------\nDoes the file complies with the grammar? {}\n---------------",
         if valid {
-            Colour::Green.underline().paint("Yes")
+            SUC.bold().paint("Yes!!")
         } else {
-            Colour::Red.underline().paint("No")
+            ERR.bold().paint("Nope!")
         }
     );
 }

@@ -1,153 +1,239 @@
-use crate::TokenType;
+use crate::{
+    rule_parser::{Grammar, RuleToken},
+    TokenType,
+};
 use ansi_term::Colour;
 
-const ERR: Colour = Colour::Red;
-const SUC: Colour = Colour::Green;
+pub const ERR: Colour = Colour::Red;
+pub const SUC: Colour = Colour::Green;
+pub const INF: Colour = Colour::Blue;
 
-// S -> C
-// C -> contact <id> <id> <num> <num> \n D |  contact <id> <id> <num> <num> \n R | None
-// R -> rate <num> <num> <num> \n R | rate <num> <num> <num> \n D | rate <num> <num> <num> \n C
-// D -> delay <num> <num> <num> \n R | delay <num> <num> <num> \n D | delay <num> <num> <num> \n C
-
-/// Runs the grammar checker
+/// It runs [apply_rule](crate::rules::apply_rule) on all the rules of the initial state, it acts as an entrypoint
 ///
 /// # Arguments
-/// - tokens: vector of tokens {TokenType}
+///
+/// * `tokens` - The tokens to match
+/// * `grammar` - The grammar to match against
 ///
 /// # Returns
-/// - true if the tokens respect the gramar, false otherwise
-pub fn prod(tokens: Vec<TokenType>) -> bool {
-    s(&tokens, 0).is_some()
+///
+/// * `bool` - Whether the tokens match the grammar or not
+pub fn apply_grammar(tokens: &[TokenType], grammar: Grammar) -> bool {
+    let results: Vec<Option<usize>> = grammar
+        .rules
+        .get(&grammar.init_state)
+        .iter()
+        .map(|rules| {
+            rules
+                .iter()
+                .map(|r| apply_rule(tokens, r.clone(), grammar.clone(), 0))
+                .find(|r| r.is_some())?
+        })
+        .collect();
+
+    println!("results: {:?}", results);
+
+    results.iter().any(|r| r.is_some())
 }
 
-/// S -> C
-fn s(tokens: &[TokenType], cursor: usize) -> Option<usize> {
-    c(tokens, cursor)
-}
-
-/// Tests if the tokens at position cursor match the rule C
-/// C -> contact <id> <id> <num> <num> \n D |  contact <id> <id> <num> <num> \n R | None
+/// This function tries to match a rule against a vector of tokens
 ///
 /// # Arguments
-/// - tokens: vector of tokens {TokenType}
-/// - cursor: current position in the vector
+///
+/// * `tokens` - The tokens to match
+/// * `rule` - The rule to match against
+/// * `grammar` - The underlying grammar
+/// * `cursor` - The current cursor position
 ///
 /// # Returns
-/// - Some(cursor) if the tokens match the rule C, None otherwise, None is equivalent of a -1 in C or other languages
-fn c(tokens: &[TokenType], cursor: usize) -> Option<usize> {
+///
+/// * `Option<usize>` - The cursor position if the rule matches, None otherwise
+///
+fn apply_rule(
+    tokens: &[TokenType],
+    rule: Vec<RuleToken>,
+    grammar: Grammar,
+    cursor: usize,
+) -> Option<usize> {
     let mut cursor = cursor;
 
-    println!(
-        "cursor position: {}",
-        Colour::Blue.bold().paint(cursor.to_string())
-    );
+    let to_match = tokens.get(cursor..)?;
 
-    // The epsillon case
-    if cursor == tokens.len() {
-        println!("C: {}", SUC.bold().paint("Epsillon case !"));
+    for (token_index, token) in rule.iter().enumerate() {
+        println!("I am trying token: {:?}", token);
 
-        return Some(cursor);
+        match token {
+            RuleToken::Rule(rule_term) => {
+                let rule = grammar.rules.get(&rule_term.clone())?;
+
+                println!("I am trying all possibilities of rule: {}\n", rule_term);
+
+                return rule
+                    .iter()
+                    .map(|r| apply_rule(tokens, r.clone(), grammar.clone(), cursor))
+                    .find(|r| r.is_some())?;
+            }
+            RuleToken::None => {
+                // The epsilon case, if epsilon is the last token we return the cursor
+                if cursor == tokens.len() {
+                    println!("{}", SUC.bold().paint("Epsilon case at the end!"));
+
+                    return Some(cursor);
+                };
+
+                cursor += 1;
+            }
+            // Here if we have different tokens we return None
+            RuleToken::Token(tok) => {
+                if to_match.get(token_index) != Some(tok) {
+                    return None;
+                } else if token_index == rule.len() - 1 {
+                    println!("{}", SUC.bold().paint(format!("Rule {:?} matches!", rule)));
+
+                    return Some(cursor);
+                } else {
+                    cursor += 1;
+                }
+            }
+        };
+    }
+
+    None
+}
+
+#[cfg(test)]
+mod test {
+    use std::{collections::HashMap, iter};
+
+    use crate::{
+        rule_parser::{Grammar, RuleToken},
+        rules::apply_grammar,
+        tokenizer::TokenType,
     };
 
-    let to_match = tokens.get(cursor..cursor + 6)?;
+    #[test]
+    fn test_epsilon_works() {
+        let mut epsilon_grammar = Grammar::new();
+        epsilon_grammar.init_state = "S".to_string();
+        epsilon_grammar.rules =
+            HashMap::from_iter(iter::once(("S".to_string(), vec![vec![RuleToken::None]])));
 
-    print!("C: {:?}", to_match);
+        let tokens = vec![];
 
-    match to_match {
-        [TokenType::Keyword("contact"), TokenType::String, TokenType::String, TokenType::Int, TokenType::Int, TokenType::Linebreak] =>
-        {
-            cursor += 6;
-
-            println!(" -> {}", SUC.bold().paint("Matched !"));
-
-            // returning anchor
-            match d(tokens, cursor) {
-                Some(c) => Some(c), // D matches so we return the cursor of D
-                None => r(tokens, cursor),
-            }
-        }
-        _ => {
-            println!(" -> {}", ERR.bold().paint("Not Matched !"));
-            None
-        }
+        assert!(apply_grammar(&tokens, epsilon_grammar));
     }
-}
 
-/// Tests if the tokens at position cursor match the rule R
-/// R -> rate <num> <num> <num> \n R | rate <num> <num> <num> \n D | rate <num> <num> <num> \n C
-///
-/// # Arguments
-/// - tokens: vector of tokens {TokenType}
-/// - cursor: current position in the vector
-///
-/// # Returns
-/// - Some(cursor) if the tokens match the rule R, None otherwise
-fn r(tokens: &[TokenType], cursor: usize) -> Option<usize> {
-    let mut cursor = cursor;
+    #[test]
+    fn test_matching_string() {
+        let mut grammar = Grammar::new();
+        grammar.init_state = "S".to_string();
+        grammar.rules = HashMap::from_iter(iter::once((
+            "S".to_string(),
+            vec![vec![RuleToken::Token(TokenType::String)]],
+        )));
 
-    let to_match = tokens.get(cursor..cursor + 5)?;
+        let tokens = vec![TokenType::String];
 
-    print!("R: {:?}", to_match);
-
-    match to_match {
-        [TokenType::Keyword("rate"), TokenType::Int, TokenType::Int, TokenType::Int, TokenType::Linebreak] =>
-        {
-            cursor += 5;
-
-            println!(" -> {}", SUC.bold().paint("Matched !"));
-
-            // returning anchor
-            match r(tokens, cursor) {
-                Some(c) => Some(c), // if R matches we return the cursor of R
-                None => match d(tokens, cursor) {
-                    // else we try for d
-                    Some(anchor_d) => Some(anchor_d),
-                    None => c(tokens, cursor), // else we try with C
-                },
-            }
-        }
-        _ => {
-            println!(" -> {}", ERR.bold().paint("Not Matched !"));
-            None
-        }
+        assert!(apply_grammar(&tokens, grammar));
     }
-}
 
-/// Tests if the tokens at position cursor match the rule D
-/// D -> delay <num> <num> <num> \n R | delay <num> <num> <num> \n D | delay <num> <num> <num> \n C
-///
-/// # Arguments
-/// - tokens: vector of tokens {TokenType}
-///
-/// # Returns
-/// - Some(cursor) if the tokens match the rule D, None otherwise
-fn d(tokens: &[TokenType], cursor: usize) -> Option<usize> {
-    let mut cursor = cursor;
+    #[test]
+    fn non_terminal_having_several_possibilities() {
+        let mut grammar = Grammar::new();
+        grammar.init_state = "S".to_string();
+        grammar.rules = HashMap::from_iter(iter::once((
+            "S".to_string(),
+            vec![
+                vec![RuleToken::Token(TokenType::String)],
+                vec![RuleToken::Token(TokenType::Int)],
+            ],
+        )));
 
-    let to_match = tokens.get(cursor..cursor + 5)?;
+        let tokens = vec![TokenType::String];
 
-    print!("D: {:?}", to_match);
+        assert!(apply_grammar(&tokens, grammar));
+    }
 
-    match to_match {
-        [TokenType::Keyword("delay"), TokenType::Int, TokenType::Int, TokenType::Int, TokenType::Linebreak] =>
-        {
-            cursor += 5;
+    #[test]
+    fn test_matching_rule() {
+        let mut grammar = Grammar::new();
+        grammar.init_state = "S".to_string();
+        grammar.rules = HashMap::from_iter(iter::once((
+            "S".to_string(),
+            vec![vec![
+                RuleToken::Token(TokenType::String),
+                RuleToken::Rule("A".to_string()),
+            ]],
+        )));
 
-            println!(" -> {}", SUC.bold().paint("Matched !"));
+        grammar.rules.insert(
+            "A".to_string(),
+            vec![vec![RuleToken::Token(TokenType::Int)]],
+        );
 
-            // returning anchor
-            match r(tokens, cursor) {
-                Some(c) => Some(c), // if R matches we return the cursor of R
-                None => match d(tokens, cursor) {
-                    // else we try for d
-                    Some(anchor_d) => Some(anchor_d),
-                    None => c(tokens, cursor), // else we try with C
-                },
-            }
-        }
-        _ => {
-            println!(" -> {}", ERR.bold().paint("Not Matched !"));
-            None
-        }
+        let tokens = vec![TokenType::String, TokenType::Int];
+
+        assert!(apply_grammar(&tokens, grammar));
+    }
+
+    #[test]
+    fn non_terminal_leading_to_several_non_terminals() {
+        let mut grammar = Grammar::new();
+        grammar.init_state = "S".to_string();
+
+        let mut rules: HashMap<String, Vec<Vec<RuleToken>>> = HashMap::new();
+
+        rules.insert(
+            "S".to_string(),
+            vec![vec![
+                RuleToken::Rule("A".to_string()),
+                RuleToken::Rule("B".to_string()),
+            ]],
+        );
+        rules.insert(
+            "A".to_string(),
+            vec![vec![RuleToken::Token(TokenType::Int)]],
+        );
+        rules.insert(
+            "B".to_string(),
+            vec![vec![RuleToken::Token(TokenType::String), RuleToken::None]],
+        );
+
+        grammar.rules = rules;
+
+        let tokens = vec![TokenType::Int, TokenType::String];
+
+        assert!(apply_grammar(&tokens, grammar));
+    }
+
+    #[test]
+    fn non_terminal_with_possibilities_having_several_non_terminals() {
+        let mut grammar = Grammar::new();
+        grammar.init_state = "S".to_string();
+
+        let mut rules: HashMap<String, Vec<Vec<RuleToken>>> = HashMap::new();
+
+        rules.insert(
+            "S".to_string(),
+            vec![vec![
+                RuleToken::Rule("A".to_string()),
+                RuleToken::Rule("B".to_string()),
+            ]],
+        );
+
+        rules.insert(
+            "A".to_string(),
+            vec![vec![RuleToken::Token(TokenType::Int)]],
+        );
+        rules.insert(
+            "B".to_string(),
+            vec![vec![RuleToken::Token(TokenType::String), RuleToken::None]],
+        );
+
+        grammar.rules = rules;
+
+        let tokens = vec![TokenType::Int, TokenType::String];
+
+        assert!(apply_grammar(&tokens, grammar));
     }
 }

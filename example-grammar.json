@@ -1,0 +1,23 @@
+[
+  {
+    "non_terminal": "S",
+    "content": "C S | C"
+  },
+  {
+    "non_terminal": "C",
+    "content": "contact <id> <id> <num> <num> <br> E"
+  },
+  {
+    "non_terminal": "E",
+    "content": "R E | D E | None"
+  },
+  {
+    "non_terminal": "R",
+    "content": "rate <num> <num> <num> <br>"
+  },
+  {
+    "non_terminal": "D",
+    "content": "delay <num> <num> <num> <br>"
+  }
+]
+  
